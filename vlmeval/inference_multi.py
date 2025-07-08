@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-import torch 
+import torch
 import torch.distributed as dist
 import random
 import datetime
@@ -32,7 +32,7 @@ def infer_data(model_name, dataset_name, out_file, logger, kg_init, stage="base"
     res = {}
     if osp.exists(out_file):
         res = load(out_file)
-        
+
     # Dataset init
     rank, world_size = get_rank_and_world_size()
     if rank == 0:
@@ -51,12 +51,12 @@ def infer_data(model_name, dataset_name, out_file, logger, kg_init, stage="base"
         if idx not in res:
             all_finished = False
     if all_finished:
-        return 
+        return
     data = data[~data['index'].isin(res)]
     lt = len(data)
 
     model = supported_VLM[model_name]() if isinstance(model_name, str) else model_name
-    
+
     for i in tqdm(range(lt)):
         idx = data.iloc[i]['index']
         if idx in res:
@@ -66,17 +66,17 @@ def infer_data(model_name, dataset_name, out_file, logger, kg_init, stage="base"
             struct = dataset.build_prompt_multi(data.iloc[i])
         else:
             struct = dataset.build_prompt(data.iloc[i])
-            
+
         response = Debate_VLM(stage, model, struct, dataset_name, debate, kg_init, logger)
         torch.cuda.empty_cache()
-        
+
         if verbose:
             print(response, flush=True)
 
         res[idx] = response
         if (i + 1) % 20 == 0:
             dump(res, out_file)
-    
+
     dump(res, out_file)
     return model
 
@@ -118,7 +118,7 @@ def infer_data_job(model, model_name, dataset_name, args, logger, ignore_failed=
 
     result_ = f'results/{model_name}/{dataset_name}/'
     result_file = result_ + f'{model_name}_{dataset_name}_{args.stage}_DB{args.debate}.xlsx'
-    rank, world_size = get_rank_and_world_size()   
+    rank, world_size = get_rank_and_world_size()
     tmpl = result_ + '{}' + f'{world_size}_{dataset_name}_{args.stage}_DB{args.debate}.pkl'
     out_file = tmpl.format(rank)
 
@@ -138,8 +138,8 @@ def infer_data_job(model, model_name, dataset_name, args, logger, ignore_failed=
             assert len(data_all) == len(data)
             data['prediction'] = [str(data_all[x]) for x in data['index']]
             data.pop('image')
-            
-            dump(data, result_file)             
+
+            dump(data, result_file)
             for i in range(world_size):
                 os.remove(tmpl.format(i))
         return model
@@ -183,7 +183,7 @@ def main():
             if model is None:
                 model = model_name # which is only a name
             model = infer_data_job(model, model_name=model_name, dataset_name=dataset_name, verbose=args.verbose, api_nproc=args.nproc)
-                         
+
             if rank == 0 and listinstr(['MMBench','ScienceQA'], dataset_name):
                 time.sleep(3)
                 res = prefetch_acc(result_file)

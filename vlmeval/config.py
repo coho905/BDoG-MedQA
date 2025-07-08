@@ -7,7 +7,7 @@ models = {
 }
 
 api_models = {
-    'GPT4V': partial(GPT4V, model='gpt-4-vision-preview', temperature=0, img_size=512, img_detail='low', retry=10),
+    'GPT4V': partial(GPT4V, model='o3-mini', temperature=0, img_size=512, img_detail='low', retry=10),
     'GeminiProVision': partial(GeminiProVision, temperature=0, retry=10),
 }
 

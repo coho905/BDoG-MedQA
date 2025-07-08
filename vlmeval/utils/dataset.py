@@ -23,7 +23,7 @@ def check_md5(data_path, dataset):
     except:
         return False
 
-    
+
 def split_MMMU(struct):
     assert 'image' in struct and 'text' in struct
     text, images = struct['text'], struct['image']
@@ -45,12 +45,12 @@ def init_prompt_multi(struct, format_):
     answer = struct['debate_ans'] if 'debate_ans' in struct else 'none'
     knowledge = struct['kg'] if 'kg' in struct else 'none'
     image_path = struct['image'] if 'image' in struct else 'none'
-    
+
     prompt = create_one_example(format_, question, context.replace("\n"," "), options, answer, knowledge, image_path)
     return prompt
 
 class TSVDataset(CustomPrompt):
-    
+
     def __init__(self, dataset='MMBench_DEV_EN', img_root=None, skip_noimg=True):
 
         self.data_root = LMUDataRoot()
@@ -73,16 +73,16 @@ class TSVDataset(CustomPrompt):
 
         data = load(data_path)
         if dataset=="ScienceQA_TEST":
-            kg_file = "/code/BDoG/data/kg_init/scienceqa_test_kg_gpt4.json" 
+            kg_file = "/code/BDoG/data/kg_init/scienceqa_test_kg_gpt4.json"
             kg_base = json.load(open(kg_file))
             kg_base = list(kg_base.values())
         elif dataset=="MMBench_DEV_EN":
-            kg_file = "/code/BDoG/data/kg_init/MMBench_DEV_EN_s.json" 
+            kg_file = "/code/BDoG/data/kg_init/MMBench_DEV_EN_s.json"
             kg_base = json.load(open(kg_file))
             kg_base = list(kg_base.values())
         else:
             kg_base = ['none' for i in range(len(data))]
-            
+
         self.skip_noimg = skip_noimg
         if skip_noimg:
             data = data[~pd.isna(data['image'])]
@@ -95,39 +95,40 @@ class TSVDataset(CustomPrompt):
         data['image'] = [str(x) for x in data['image']]
         ## Add kg_init
         data['kg'] = kg_base
-        
+        '''
         image_map = {x: y for x, y in zip(data['index'], data['image'])}
         for k in image_map:
             if len(image_map[k]) <= 64:
                 idx = image_map[k]
                 assert idx in image_map and len(image_map[idx]) > 64
                 image_map[k] = image_map[idx]
-    
+
         data['image'] = [
-            eval(image_map[k]) if isliststr(image_map[k]) else image_map[k] 
+            eval(image_map[k]) if isliststr(image_map[k]) else image_map[k]
             for k in data['index']
         ]
+        '''
         if 'image_path' in data:
             data['image_path'] = [
                 eval(pths) if isliststr(pths) else pths for pths in data['image_path']
             ]
         if np.all([istype(x, int) for x in data['index']]):
             data['index'] = [int(x) for x in data['index']]
-            
+
         self.data = data
 
         img_root = img_root if img_root is not None else osp.join('images', img_root_map[dataset])
         os.makedirs(img_root, exist_ok=True)
         self.img_root = img_root
-        
+
 #         self.set_file()
 #         print("#### Save: /code/VLMEvalKit-main/data/CCBench_Fin.tsv")
 
     def __len__(self):
         return len(self.data)
-    
+
     def set_file(self,data_in,data_out):
-        dataset = self.dataset    
+        dataset = self.dataset
         print("##START Processing: ", dataset)
         with open(data_in, 'r') as in_file:
             with open(data_out, 'w', newline='') as out_file:
@@ -143,7 +144,7 @@ class TSVDataset(CustomPrompt):
                     row['image'] = tgt_path
                     writer.writerow(row)
                 print(writer.fieldnames)
-        
+
     def build_prompt(self, line, dataset=None):
         if dataset is None:
             dataset = self.dataset
@@ -151,7 +152,7 @@ class TSVDataset(CustomPrompt):
         if isinstance(line, int):
             line = self.data.iloc[line]
 
-        tgt_path = self.dump_image(line, dataset)
+        #tgt_path = self.dump_image(line, dataset)
 
         prompt = line['question']
         if DATASET_TYPE(dataset) == 'multi-choice':
@@ -172,10 +173,10 @@ class TSVDataset(CustomPrompt):
             if len(options):
                 prompt += options_prompt
                 prompt += "Answer with the option's letter from the given choices directly.\n"
-        
-        return dict(image=tgt_path, text=prompt)
-    
-    
+
+        return dict(text=prompt)
+
+
     def build_prompt_multi(self, line, dataset=None):
         if dataset is None:
             dataset = self.dataset
@@ -183,7 +184,7 @@ class TSVDataset(CustomPrompt):
         if isinstance(line, int):
             line = self.data.iloc[line]
 
-        tgt_path = self.dump_image(line, dataset)
+        #tgt_path = self.dump_image(line, dataset)
         prompt = {}
         prompt['index'] = line['index']
         prompt['answer'] = line['gpt4_ans'] if dataset == "LLaVABench" else line['answer']
@@ -203,11 +204,11 @@ class TSVDataset(CustomPrompt):
             for key, item in options.items():
                 options_prompt += f'{key}. {item}\n'
                 choise.append(item)
-                
+
             hint = line['hint'] if ('hint' in line and not pd.isna(line['hint'])) else None
             if dataset == "LLaVABench":
                 hint = line['caption'] if ('caption' in line and not pd.isna(line['caption'])) else None
-            
+
             if hint is not None:
                 prompt['hint'] = f'{hint}'
             if len(options):
@@ -216,10 +217,10 @@ class TSVDataset(CustomPrompt):
 #                 prompt['options'] += "Answer with the option's letter from the given choices directly"
                 prompt['choise'] = choise
 #         print(tgt_path)
-        return dict(image=tgt_path, text=prompt)
-    
+        return dict(text=prompt)
+
     def display(self, line):
         if isinstance(line, int):
             line = self.data.iloc[line]
         mmqa_display(line)
-    
+
