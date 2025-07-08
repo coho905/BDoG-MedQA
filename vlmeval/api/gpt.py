@@ -175,13 +175,63 @@ class GPT4V(OpenAIWrapper):
         # **kwargs will no longer contain a conflicting 'model' key.
         super().__init__(model='o3-mini', **kwargs)
 
-    def generate(self, prompt, image_path=None, dataset=None):
-        inputs = []
-        if image_path:
-            inputs.append(image_path)
-        inputs.append(prompt)
-        print(inputs)
-        return super(GPT4V, self).generate(inputs)
+    def generate(self, messages, img_input=None, **kwargs):
+        for _ in range(self.retry):
+            try:
+                import openai
+
+                # === o3-mini or any text-only model fallback ===
+                if self.model == 'o3-mini' and img_input is None:
+                    response = openai.ChatCompletion.create(
+                        model=self.model,
+                        messages=messages,
+                        temperature=self.temperature,
+                        max_tokens=1024,
+                    )
+                    return response["choices"][0]["message"]["content"]
+
+                # === vision model ===
+                if img_input is None:
+                    raise ValueError(f"{self.model} expects image input but none was provided.")
+
+                # Assume img_input is a base64 string (without data URL prefix)
+                image_data_url = f"data:image/jpeg;base64,{img_input}"
+
+                # Format for vision-based models (e.g., gpt-4-vision-preview)
+                vision_messages = []
+                for i, m in enumerate(messages):
+                    if i == 0:
+                        vision_messages.append({
+                            "role": m["role"],
+                            "content": [
+                                {
+                                    "type": "image_url",
+                                    "image_url": {
+                                        "url": image_data_url,
+                                        "detail": self.img_detail
+                                    }
+                                },
+                                {
+                                    "type": "text",
+                                    "text": m["content"]
+                                }
+                            ]
+                        })
+                    else:
+                        vision_messages.append(m)
+
+                response = openai.ChatCompletion.create(
+                    model=self.model,
+                    messages=vision_messages,
+                    temperature=self.temperature,
+                    max_tokens=1024,
+                )
+                return response["choices"][0]["message"]["content"]
+
+            except Exception as e:
+                print(f"[GPT4V ERROR] {e}")
+
+        return "Failed to obtain answer via API."
 
     def interleave_generate(self, ti_list, dataset=None):
         return super(GPT4V, self).generate(ti_list)

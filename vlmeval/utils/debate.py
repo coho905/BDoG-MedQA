@@ -13,16 +13,16 @@ def Debate_VLM(stage, model, struct, dataset_name, debate, kg_init, logger):
 
             prompt_format = "ODIM-S" if debate_==0 else "ODQIM-S"
             prompt_A = init_prompt_multi(struct, prompt_format)
-            kg_aff = model.generate(prompt=prompt_A, dataset=dataset_name)
+            kg_aff = model.generate(messages=prompt_A, dataset=dataset_name)
 
             prompt_format = "ONIM-S" if debate_==0 else "ONQIM-S"
             prompt_N = init_prompt_multi(struct, prompt_format)
-            kg_neg = model.generate(prompt=prompt_N, dataset=dataset_name)
+            kg_neg = model.generate(messages=prompt_N, dataset=dataset_name)
 
             struct['kg'] = [kg_aff.strip(), kg_neg.strip()]
             prompt_format = "OAGM-A"
             prompt_F = init_prompt_multi(struct, prompt_format)
-            response = model.generate(prompt=prompt_F, dataset=dataset_name, max_length=20)
+            response = model.generate(messages=prompt_F, dataset=dataset_name, max_length=20)
 
             logger.info("########--ANSWER-{}--######\n{}".format(debate_, response))
 
@@ -39,31 +39,31 @@ def Debate_VLM(stage, model, struct, dataset_name, debate, kg_init, logger):
                     else:
                         prompt_format = "GKG-G"
                         prompt_G = init_prompt_multi(struct, prompt_format)
-                        kg_base = model.generate(prompt=prompt_G, dataset=dataset_name)
+                        kg_base = model.generate(messages=prompt_G, dataset=dataset_name)
                         struct['kg'] = [kg_base, kg_base]
                         logger.info("#####---KG_P---#####\n{}".format(prompt_G))
                         logger.info("#####---KG_B---#####\n{}".format(kg_base))
                 else:
                     prompt_format = "GKG-G"
                     prompt_G = init_prompt_multi(struct, prompt_format)
-                    kg_base = model.generate(prompt=prompt_G, dataset=dataset_name)
+                    kg_base = model.generate(messages=prompt_G, dataset=dataset_name)
                     struct['kg'] = [kg_base, kg_base]
                     logger.info("#####---KG_P---#####\n{}".format(prompt_G))
                     logger.info("#####---KG_B---#####\n{}".format(kg_base))
 
             prompt_format = "KDQIM-G"
             prompt_A = init_prompt_multi(struct, prompt_format)
-            kg_aff = model.generate(prompt=prompt_A, dataset=dataset_name)
+            kg_aff = model.generate(messages=prompt_A, dataset=dataset_name)
             struct['kg'] = [kg_aff,struct['kg'][1]]
 
             prompt_format = "KNQIM-G"
             prompt_N = init_prompt_multi(struct, prompt_format)
-            kg_neg = model.generate(prompt=prompt_N, dataset=dataset_name)
+            kg_neg = model.generate(messages=prompt_N, dataset=dataset_name)
 
             struct['kg'] = [kg_aff, kg_neg]
             prompt_format =  "KAGM-A"
             prompt_F = init_prompt_multi(struct, prompt_format)
-            response = model.generate(prompt=prompt_F, dataset=dataset_name)
+            response = model.generate(messages=prompt_F, dataset=dataset_name)
 
             logger.info("########--ANSWER-{}--######\n{}".format(debate_, response))
 
